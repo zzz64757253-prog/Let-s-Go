@@ -61,22 +61,26 @@ type IncomingMessage struct {
 }
 type ChatRequest struct {
 	Messages []openai.ChatCompletionMessage `json:"messages"`
+	Model    string
 }
 type MenuType struct {
-	Menu_id   string  `json:"menu_id"`
+	Menu_id   int     `json:"menu_id"`
 	Name_menu string  `json:"name_menu"`
 	Menu_url  *string `json:"menu_url"`
 	Parent_id *int    `json:"parent_id"`
 	Menu_icon *string `json:"menu_icon"`
 }
 type PostType struct {
-	Post_uid  string    `json:"post_uid"`
-	Username  string    `json:"username"`
-	Title     string    `json:"title"`
-	Content   string    `json:"content"`
-	Image_url *string   `json:"image_url"`
-	Post_date time.Time `json:"post_date"`
-	Pin       string    `json:"pin"`
+	Post_uid  string     `json:"post_uid"`
+	Username  string     `json:"username"`
+	Title     string     `json:"title"`
+	Content   string     `json:"content"`
+	Image_url *string    `json:"image_url"`
+	Post_date *time.Time `json:"post_date"`
+	Pin       string     `json:"pin"`
+}
+type ModelType struct {
+	Modelname string `json:"modelname"`
 }
 
 func main() {
@@ -125,15 +129,15 @@ func main() {
 		var req ChatRequest
 		c.ShouldBindJSON(&req)
 		messages := append([]openai.ChatCompletionMessage{
-			{Role: "system", Content: "คุณคือ โลนัลโด้ นักบอลหลงตัวเอง"},
+			{Role: "system", Content: "`คุณคือผู้ช่วยเว็บ Portfolio ของ อัครพล (Zee) นักพัฒนา Full-stack (Nuxt, Go) หน้าที่: แนะนำทักษะ ผลงาน และให้ข้อมูลจ้างงาน สนใจจ้างงานติดต่อ: - Line: [ไอดีไลน์] - Tel: [เบอร์โทร] - Email: [อีเมล] ตอบสุภาพ สั้นกระชับ ตรงประเด็น`"},
 		}, req.Messages...)
 		resp, err := client.CreateChatCompletion(c.Request.Context(), openai.ChatCompletionRequest{
-			Model:    "gemini-3.5-flash-lite",
+			Model:    req.Model,
 			Messages: messages,
 		})
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
-			fmt.Println(os.Getenv("GEMINI_API_KEY"))
+
 			return
 		}
 		c.JSON(200, gin.H{"message": resp.Choices[0].Message.Content})
@@ -166,7 +170,6 @@ func main() {
 			ContentType: fileHeader.Header.Get("Content-Type"),
 		})
 		if err != nil {
-			fmt.Println("333")
 			c.JSON(http.StatusInternalServerError, gin.H{"statusMessage": "อัปโหลดขึ้น R2 ไม่สำเร็จ: " + err.Error()})
 			return
 		}
@@ -331,6 +334,71 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{
 			"success": "success",
 			"message": "ลบสำเร็จ!!",
+		})
+	})
+	r.POST("/api/content", func(c *gin.Context) {
+		var req PostType
+		c.ShouldBindJSON(&req)
+		_, err := dbPool.Exec(context.Background(), "INSERT INTO posts (username, title, content, image_url, pin) VALUES ($1, $2, $3, $4, $5)",
+			req.Username,
+			req.Title,
+			req.Content,
+			req.Image_url,
+			req.Pin,
+		)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": "failure",
+				"message": "เกิดข้อผิดพลาดบางอย่าง!",
+			})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"success": "success",
+			"message": "เพิ่มโพสต์สำเร็จ!",
+		})
+
+	})
+	r.GET("/api/mobilemenu", func(c *gin.Context) {
+		var menus []MenuType
+		rows, err := dbPool.Query(context.Background(), "SELECT menu_id, name_menu, menu_url, menu_icon FROM menu WHERE menu_url IS NOT NULL ORDER BY menu_id ASC")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var ms MenuType
+			if err := rows.Scan(&ms.Menu_id, &ms.Name_menu, &ms.Menu_url, &ms.Menu_icon); err != nil {
+				fmt.Println(err)
+				return
+			}
+			menus = append(menus, ms)
+		}
+		fmt.Println(menus)
+		c.JSON(http.StatusOK, gin.H{
+			"menus": menus,
+		})
+		fmt.Println(rows)
+	})
+	r.GET("/api/model", func(c *gin.Context) {
+		var models []ModelType
+		rows, err := dbPool.Query(context.Background(), "SELECT modelname FROM models")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var m ModelType
+			if err := rows.Scan(&m.Modelname); err != nil {
+				fmt.Println(err)
+				return
+			}
+			models = append(models, m)
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"models": models,
 		})
 	})
 	r.Run(":8080")

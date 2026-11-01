@@ -8,13 +8,15 @@ interface MenuType {
   menu_url: string
   menu_icon: string
 }
-const { data: menus } = await useFetch<MenuType[]>('/api/mobilemenu')
-console.log(menus.value)
+interface ArrMenu{
+  menus: MenuType[]
+}
+const { data: menus } = await useFetch<ArrMenu>('/server/mobilemenu')
 </script>
 <template>
-  <nav class="fixed top-0 w-screen h-[60px] border border-black bg-white z-50">
+  <nav v-if="menus?.menus" class="fixed top-0 w-screen h-[60px] border border-black bg-white z-50">
     <div class="flex justify-between items-center border border-blue-200 h-[100%] px-5 py-0">
-        <div v-for="menu in menus" :key="menu.menu_id" class="h-full w-[50px]" >
+        <div v-for="menu in menus.menus" :key="menu.menu_id" class="h-full w-[50px]" >
             <NuxtLink :to="menu.menu_url" class="relative h-full flex justify-center items-center">
                 <Icon :name="`heroicons:${menu.menu_icon}-20-solid`" 
                     class="w-8 h-8 text-blue-400" 

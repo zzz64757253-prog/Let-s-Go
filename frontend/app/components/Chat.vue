@@ -6,11 +6,15 @@ const message = ref('');
 const messages = ref<{ content: string; role: string }[]>([]);
 
 const chatContainer = ref<HTMLDivElement | null>(null);
+interface Modeltype {
+  modelname: string
+}
+interface ArrModel {
+  models: Modeltype[]
+}
+const Needmodel = ref("gemini-3.5-flash-lite");
 
-const Needmodel = ref('gpt-5.4-nano');
-
-const { data: models, error } = await useFetch('/api/model')
-
+const { data: models, error } = await useFetch<ArrModel>('/server/model')
 const scrollToBottom = async () => {
   await nextTick(); // รอให้ Vue วาดข้อความใหม่ลง DOM ก่อน
   if (chatContainer.value) {
@@ -34,7 +38,7 @@ const sendMessage = async () => {
     };
     messages.value.push(obj);
     message.value = '';
-    
+    console.log(Needmodel.value)
     const res = await $fetch<{ message: string }>('/server/chat', {
       method: 'POST',
       body: { messages: messages.value.slice(-5), model: Needmodel.value }
@@ -62,15 +66,17 @@ const sendMessage = async () => {
 <template>
   <div :class="openChat == true ? 'block' : 'hidden'" class="border border-gray-300 rounded-md w-80 h-[420px] flex flex-col overflow-hidden">
     <div class="bg-blue-400 p-2 flex flex-row justify-between items-center">
-      <select v-model="Needmodel" class="bg-blue-400 text-white text-xl font-bold">
-        <option class="bg-gray-400 text-white text-xl font-bold" 
-          v-for="model in models"
-          :key="model.modelname"
-          :value="model.modelname"
-        >
-          {{ model.modelname }}
-        </option>
-      </select>
+      <div class="flex"> <h1 class="bg-blue-400 text-white text-xl font-bold">คุยกับ</h1>
+        <select v-model="Needmodel" class="bg-blue-400 text-white text-sm font-bold">
+          <option class="bg-gray-400 text-white text-xl font-bold" 
+            v-for="model in models?.models"
+            :key="model.modelname"
+            :value="model.modelname"
+          >
+            {{ model.modelname }}
+          </option>
+        </select>
+      </div>
       <Icon @click="openChat = !openChat" name="heroicons:x-circle-20-solid" class="w-6 h-6 text-white hover:text-red-500 cursor-pointer transition-all duration-300" />
     </div>
     <div 

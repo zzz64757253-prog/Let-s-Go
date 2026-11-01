@@ -66,7 +66,7 @@ async function handleUpload(number: number) {
 async function handleSubmit() {
   try {
     // ใช้ $fetch ยิง POST ส่ง body ไปหา Server
-    const result = await $fetch('/server/content', {
+    const result = await $fetch<{success:NotifyType, message:string}>('/server/content', {
       method: 'POST',
       body: {
         username: username.value,
@@ -77,7 +77,10 @@ async function handleSubmit() {
       },
     })
 
-    // ล้างค่าในฟอร์ม
+    if (result.success == "failure"){
+      Notify[result.success as NotifyType](result.message);
+      return
+    }
     username.value = ''
     title.value = ''
     content.value = ''
@@ -87,9 +90,10 @@ async function handleSubmit() {
     Notify[result.success as NotifyType](result.message);
     postsKey.value++
   } catch (err: any) {
-    // message.value = 'เกิดข้อผิดพลาด: ' + (err.data?.statusMessage || err.message)
+    if (uploadedUrl.value !== '') {
+      await delImage(uploadedUrl.value)
+    }
     Notify.failure(err.data?.statusMessage || err.message);
-
   }
 }
   const delImage = async (url : string) => {
