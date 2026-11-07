@@ -17,7 +17,7 @@ onMounted(() => {
     <AppSidebar v-if="!isMobile"/>
     <AppNavbar v-else />
     
-    <main class="w-full flex-1 p-2">
+    <main class="w-full flex-1">
       <slot />
     </main>
   </div>

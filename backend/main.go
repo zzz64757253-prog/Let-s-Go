@@ -82,6 +82,13 @@ type PostType struct {
 type ModelType struct {
 	Modelname string `json:"modelname"`
 }
+type SkillType struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Score       int    `json:"score"`
+	Image_url   string `json:"image_url"`
+	Skill_type  int    `json:"skill_type"`
+}
 
 func main() {
 	err := godotenv.Load("../.env")
@@ -375,11 +382,9 @@ func main() {
 			}
 			menus = append(menus, ms)
 		}
-		fmt.Println(menus)
 		c.JSON(http.StatusOK, gin.H{
 			"menus": menus,
 		})
-		fmt.Println(rows)
 	})
 	r.GET("/api/model", func(c *gin.Context) {
 		var models []ModelType
@@ -400,6 +405,25 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{
 			"models": models,
 		})
+	})
+	r.GET("/api/skill", func(c *gin.Context) {
+		var skills []SkillType
+		rows, err := dbPool.Query(context.Background(), "SELECT name, description, score, image_url, skill_type FROM skills ORDER BY  skills.skill_type ASC, skills.order ASC")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var s SkillType
+			err := rows.Scan(&s.Name, &s.Description, &s.Score, &s.Image_url, &s.Skill_type)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			skills = append(skills, s)
+		}
+		c.JSON(http.StatusOK, skills)
 	})
 	r.Run(":8080")
 }
